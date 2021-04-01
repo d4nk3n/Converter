@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>转换器</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui@2.15.1/lib/theme-chalk/index.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+</head>
+
+<body>
+    <div id="app">
+        <h3>转调器</h3>
+        <el-form :inline="true" :model="formInline" ref="form" size="mini" :rules="rules">
+            <el-form-item label="升降半音：" prop="input_num">
+                <el-input v-model.number="formInline.input_num" prop="input_num" style="width: 85px;"></el-input>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" plain icon="el-icon-refresh" @click="onConvert">开始转换</el-button>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="danger" icon="el-icon-delete" @click="onEmpty">清空</el-button>
+            </el-form-item>
+        </el-form>
+        <el-input v-model="input_score" ref="score" placeholder="请输入谱子" type="textarea" :rows="score_rows"
+            resize="none"></el-input>
+    </div>
+</body>
+
+<style>
+    .el-input input {
+        text-align: center
+    }
+
+    .el-textarea textarea {
+        font-family: 'Microsoft YaHei'
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/element-ui@2.15.1/lib/index.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        data: function () {
+            var checkNum = (rule, value, callback) => {
+                if (value === "") {
+                    return callback(new Error("内容不能为空"));
+                }
+                if (!Number.isInteger(value)) {
+                    callback(new Error("请输入数字"));
+                }
+                if (value < -13 || value > 13) {
+                    callback(new Error("区间：[-13, 13]"));
+                }
+                callback();
+            };
+            return {
+                formInline: {
+                    input_num: 0
+                },
+                input_score: '',
+                rules: {
+                    input_num: [
+                        { validator: checkNum }
+                    ]
+                },
+                score_rows: 2,
+                scoreList: ["{1}", "{#1}", "{2}", "{#2}", "{3}", "{4}", "{#4}", "{5}", "{#5}", "{6}", "{#6}", "{7}",
+                            "(1)", "(#1)", "(2)", "(#2)", "(3)", "(4)", "(#4)", "(5)", "(#5)", "(6)", "(#6)", "(7)",
+                            "1"  , "#1"  , "2"  , "#2"  , "3"  , "4"  , "#4"  , "5"  , "#5"  , "6"  , "#6"  , "7"  ,
+                            "[1]", "[#1]", "[2]", "[#2]", "[3]", "[4]", "[#4]", "[5]", "[#5]", "[6]", "[#6]", "[7]"]
+            }
+        },
+        methods: {
+            setSize() {
+                var fillsize = window.innerHeight - document.body.clientHeight - 27;
+                var change = Math.floor(fillsize / 20.6667);
+                if (change > 1 || change < 0) {
+                    this.score_rows += change;
+                }
+            },
+            onConvert() {
+                this.$refs.form.validate((valid) => {
+                    if (valid) {
+                        if (this.convert(this.input_score)) {
+                            this.$notify({
+                                title: '成功',
+                                duration: 1000,
+                                message: '转换成功',
+                                type: 'success'
+                            });
+                        } else {
+                            this.$notify.error({
+                                title: '错误',
+                                duration: 1000,
+                                message: '超出转换范围'
+                            });
+                        }
+                    } else {
+                        this.$notify.error({
+                            title: '错误',
+                            duration: 1000,
+                            message: '请检查设置'
+                        });
+                    }
+                });
+            },
+            convert(score) {
+                var re = /{#?[1-7]}|\(#?[1-7]\)|#?[1-7]|\[#?[1-7]\]/g;
+                if (this.formInline.input_num === 0) {
+                    return true;
+                }
+                try {
+                    var newScore = score.replace(re, this.replace);
+                    this.input_score = newScore;
+                    return true;
+                }
+                catch (ex) {
+                    return false;
+                }
+            },
+            replace(match) {
+                var index = this.scoreList.indexOf(match);
+                var offset = this.formInline.input_num;
+                if (index === -1) {
+                    return match;
+                }
+                var index_after = index + offset;
+                if (index_after < 0 || index_after > 47) {
+                    throw new RangeError("out of range");
+                    return "";
+                }
+                else {
+                    return this.scoreList[index + offset];
+                }
+            },
+            onEmpty() {
+                this.input_score = '';
+                this.formInline.input_num = 0;
+                this.$notify({
+                    title: '成功',
+                    duration: 1000,
+                    message: '清空成功！',
+                    type: 'success'
+                });
+            }
+        },
+        mounted() {
+            this.setSize();
+            window.onresize = () => {
+                this.setSize();
+            }
+        }
+    })
+</script>
+
+</html>
